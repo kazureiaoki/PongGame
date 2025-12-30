@@ -37,12 +37,14 @@ A classic **Pong** game with AI opponent, built from scratch in **C++17** using 
 
 ## 🏗 Architecture
 
+```
 PongGame/
-├── Game.h / Game.cpp # Main game class (game loop, logic, rendering)
-├── Paddle.h # Paddle class (movement, clamping)
-├── Ball.h # Ball class (physics, collision detection)
-├── PongGame.cpp # Entry point (main)
-└── Fonts/ # Assets
+├── Game.h / Game.cpp        # Main game class (game loop, logic, rendering)
+├── Paddle.h                 # Paddle class (movement, clamping)
+├── Ball.h                   # Ball class (physics, collision detection)
+├── PongGame.cpp             # Entry point (main)
+└── Fonts/                   # Assets
+```
 
 **Design Patterns:**
 - Game Loop Pattern
@@ -53,16 +55,60 @@ PongGame/
 
 ## 🚀 How to Run
 
-### Prerequisites
-- Windows 10/11 x64
-- Visual Studio 2022 (or later)
-- SFML 3.0.2 (installed via NuGet)
+### Requirements
+- **Windows 10/11 x64**
+- **Visual Studio 2022** with:
+  - Desktop development with C++
+  - CMake tools for Windows
+- **Git** (with support for submodules)
 
-### Steps
-1. Clone the repository
-2. Open `PongGame.sln` in Visual Studio
-3. Switch to **Release | x64** configuration
-4. Press **F5** or **Ctrl+F5**
+### Step 1: Clone with Submodules
+```
+git clone --recursive https://github.com/kazureiaoki/PongGame.git
+cd PongGame
+```
+
+> **Important:** Use `--recursive` to automatically download SFML as a submodule.
+
+### Step 2: Generate Project with CMake
+```
+cmake -S . -B build -A x64
+```
+
+This will create a `build/` folder with the Visual Studio solution.
+
+### Step 3: Open in Visual Studio
+```
+start build\PongGame.sln
+```
+
+Or manually: Open `build/PongGame.sln` in Visual Studio 2022.
+
+### Step 4: Build and Run
+1. Switch to **Release | x64** configuration
+2. Right-click on **PongGame** → **Set as Startup Project**
+3. Press **F5** (or **Ctrl+F5** to run without debugging)
+
+The game will launch in a 1280x960 window.
+
+---
+
+## 📦 Archive Distribution
+
+If you're distributing the project as a `.zip`:
+- Include the `external/SFML/` folder (or instruct users to run `git submodule update --init --recursive` after extracting)
+- CMake will automatically configure SFML during the build process
+
+---
+
+## 🛠 Technical Details
+
+- **SFML Version:** 2.6.2 (managed via Git Submodule)
+- **Build System:** CMake 3.16+
+- **Compiler:** MSVC 2022 (C++17)
+- **Graphics Library:** SFML (statically linked)
+
+Dependencies are managed through Git submodules — no manual installation required.
 
 ---
 
@@ -105,7 +151,9 @@ Feel free to use it for learning purposes.
 ## 📧 Contact
 
 **Author:** Daniella 
+
 **LinkedIn:** https://www.linkedin.com/in/daniellatskhovriebova/ 
+
 **Email:** daniellatskho@gmail.com
 
 ---
