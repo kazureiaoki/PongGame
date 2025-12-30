@@ -1,0 +1,48 @@
+# CMake build files
+build/
+CMakeCache.txt
+CMakeFiles/
+
+# Visual Studio
+.vs/
+x64/
+Debug/
+Release/
+*.user
+*.suo
+*.sln.docstates
+*.vcxproj.user
+
+# Old solution files (replaced by CMake)
+PongGame.sln
+PongGame.vcxproj
+PongGame.vcxproj.filters
+
+# NuGet (not used anymore)
+packages/
+
+# Compiled files
+*.exe
+*.dll
+*.obj
+*.pdb
+*.ilk
+*.log
+*.tlog
+*.idb
+*.ipch
+*.aps
+*.ncb
+*.opendb
+*.opensdf
+*.sdf
+*.cachefile
+*.VC.db
+*.VC.VC.opendb
+
+# Temporary files
+*.tmp
+*.cache
+*.bak
+*.swp
+*~
