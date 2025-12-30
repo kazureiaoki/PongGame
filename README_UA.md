@@ -25,6 +25,14 @@
 
 ---
 
+## 🎥 Демо
+
+![Gameplay](screenshots/ponggame.gif)
+
+![Screenshot](screenshots/ponggame.jpg)
+
+---
+
 ## 🏗 Архітектура проєкту
 
 ### Структура файлів
@@ -362,3 +370,4 @@ start build\PongGame.sln
 **GitHub:** https://github.com/kazureiaoki/PongGame  
 
 **Дата:** 25.12.2025
+
