@@ -1,48 +1,55 @@
-# CMake build files
-build/
-CMakeCache.txt
-CMakeFiles/
-
-# Visual Studio
+# Visual Studio cache/options
 .vs/
+
+# CMake build directories
+build/
+out/
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
 x64/
-Debug/
-Release/
+x86/
+[Bb]in/
+[Oo]bj/
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Visual Studio specific
 *.user
 *.suo
 *.sln.docstates
+*.vcxproj
+*.vcxproj.filters
 *.vcxproj.user
+*.sln
 
-# Old solution files (replaced by CMake)
-PongGame.sln
-PongGame.vcxproj
-PongGame.vcxproj.filters
-
-# NuGet (not used anymore)
-packages/
-
-# Compiled files
-*.exe
-*.dll
-*.obj
-*.pdb
-*.ilk
-*.log
-*.tlog
-*.idb
-*.ipch
-*.aps
-*.ncb
-*.opendb
-*.opensdf
-*.sdf
-*.cachefile
-*.VC.db
-*.VC.VC.opendb
-
-# Temporary files
-*.tmp
-*.cache
-*.bak
-*.swp
-*~
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
