@@ -26,7 +26,7 @@ A classic **Pong** game with AI opponent, built from scratch in **C++17** using 
 
 ![Gameplay](screenshots/ponggame.gif)
 
-![Screenshot](screenshots/ponggame.png)
+![Screenshot](screenshots/ponggame.jpg)
 
 ---
 
