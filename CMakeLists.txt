@@ -7,11 +7,28 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_subdirectory(external/SFML)
 
 add_executable(PongGame
-    PongGame.cpp
-    Game.cpp
-    Game.h
-    Paddle.h
-    Ball.h
+    src/PongGame.cpp
+    src/include/Constants.h
+    src/include/GameObject.h
+    src/include/Game.h
+    src/Game.cpp
+    src/include/Paddle.h
+    src/Paddle.cpp
+    src/include/Ball.h
+    src/Ball.cpp
+    src/include/TextObject.h
+    src/TextObject.cpp
+    src/include/ScoreText.h
+    src/ScoreText.cpp
+    src/include/GameOverText.h
+    src/GameOverText.cpp
+    src/include/RestartHintText.h 
+    src/RestartHintText.cpp 
+)
+
+target_include_directories(PongGame PRIVATE 
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/include
 )
 
 target_link_libraries(PongGame PRIVATE 

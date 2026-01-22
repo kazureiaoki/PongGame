@@ -1,6 +1,6 @@
 ﻿# 🎮 Pong Game
 
-A classic **Pong** game with AI opponent, built from scratch in **C++17** using **SFML 3.0**.
+A classic **Pong** game with AI opponent, built from scratch in **C++17** using **SFML 3.0.2**.
 
 ![C++](https://img.shields.io/badge/C++-17-blue?logo=cplusplus)
 ![SFML](https://img.shields.io/badge/SFML-3.0-green)
@@ -10,12 +10,15 @@ A classic **Pong** game with AI opponent, built from scratch in **C++17** using 
 
 ## ✨ Features
 
-- **AI Opponent** with realistic behavior (tracks ball position with dead-zone)
-- **Physics-based ball movement** with angle-dependent paddle collision
-- **Score tracking** (first to 5 points wins)
-- **Game Over screen** with winner announcement
-- **Randomized ball angles** after each goal
-- **Delta time** for frame-independent movement
+- Singleplayer: **Player vs AI bot**
+- AI paddle with a **dead-zone** so it does not play perfectly
+- Physics-based ball movement with **angle-dependent** paddle bounces
+- **Score system** (first to 5 points wins)
+- **Game Over** screen with winner announcement
+- **Restart** game from keyboard (press **R**)
+- **ESC** to quit instantly
+- Short **post-goal pause** with a visible ball
+- Randomized ball launch angle in range **[-45°, +45°]** after each goal
 
 ---
 
@@ -23,15 +26,17 @@ A classic **Pong** game with AI opponent, built from scratch in **C++17** using 
 
 ![Gameplay](screenshots/ponggame.gif)
 
-![Screenshot](screenshots/ponggame.jpg)
+![Screenshot](screenshots/ponggame.png)
 
 ---
 
 ## 🛠 Tech Stack
 
-- **C++17** (OOP, STL, smart pointers)
-- **SFML 3.0.2** (graphics, window management, events)
-- **Visual Studio 2022** (MSVC compiler)
+- **Language:** C++17 (OOP, inheritance, polymorphism, STL, smart pointers)
+- **Graphics / Windowing:** SFML **3.0.2**
+- **Build System:** CMake 3.21+
+- **Compiler / IDE:** Visual Studio 2022 (MSVC, x64)
+- **OS:** Windows 10/11 x64
 
 ---
 
@@ -39,17 +44,47 @@ A classic **Pong** game with AI opponent, built from scratch in **C++17** using 
 
 ```
 PongGame/
-├── Game.h / Game.cpp        # Main game class (game loop, logic, rendering)
-├── Paddle.h                 # Paddle class (movement, clamping)
-├── Ball.h                   # Ball class (physics, collision detection)
-├── PongGame.cpp             # Entry point (main)
-└── Fonts/                   # Assets
+├── src/
+│   ├── include/
+│   │   ├── GameObject.h          # Abstract base for all game objects
+│   │   ├── Ball.h                # Ball (physics, collisions)
+│   │   ├── Paddle.h              # Paddles (player + AI)
+│   │   ├── Game.h                # Main game class (loop, states)
+│   │   ├── TextObject.h          # Base class for SFML text UI
+│   │   ├── ScoreText.h           # Score display
+│   │   ├── GameOverText.h        # Game Over banner
+│   │   ├── RestartHintText.h     # "Press R to restart" hint
+│   │   └── Constants.h           # All gameplay constants
+│   ├── Ball.cpp
+│   ├── Paddle.cpp
+│   ├── Game.cpp
+│   ├── TextObject.cpp
+│   ├── ScoreText.cpp
+│   ├── GameOverText.cpp
+│   ├── RestartHintText.cpp
+│   └── PongGame.cpp              # Entry point (main)
+├── Fonts/
+│   └── CaesarDressing-Regular.ttf
+├── external/
+│   └── SFML/                     # SFML as Git submodule
+└── CMakeLists.txt
 ```
 
 **Design Patterns:**
-- Game Loop Pattern
-- Encapsulation (each class handles its own logic)
-- RAII (`std::unique_ptr` for resource management)
+
+- `GameObject` is an abstract base class with `update()` and `draw()` for all entities.
+- `Paddle`, `Ball`, and `TextObject` inherit from `GameObject`.
+- `ScoreText`, `GameOverText`, `RestartHintText` inherit from `TextObject` to reuse UI logic.
+- Game uses composition to own paddles, ball, and UI via `std::unique_ptr`.
+- All “magic numbers” live in `Constants.h` as constexpr values.
+
+Patterns used:
+
+- Game Loop (`Game::run` → `handleEvents` → `update` → `render`)
+- Inheritance & Polymorphism via `GameObject`
+- Factory-like ball spawn with `enum class LaunchDirection`
+- RAII with `std::unique_ptr` for SFML text objects
+- DRY via shared `TextObject` base for all on-screen text
 
 ---
 
@@ -91,24 +126,7 @@ Or manually: Open `build/PongGame.sln` in Visual Studio 2022.
 
 The game will launch in a 1280x960 window.
 
----
-
-## 📦 Archive Distribution
-
-If you're distributing the project as a `.zip`:
-- Include the `external/SFML/` folder (or instruct users to run `git submodule update --init --recursive` after extracting)
-- CMake will automatically configure SFML during the build process
-
----
-
-## 🛠 Technical Details
-
-- **SFML Version:** 2.6.2 (managed via Git Submodule)
-- **Build System:** CMake 3.16+
-- **Compiler:** MSVC 2022 (C++17)
-- **Graphics Library:** SFML (statically linked)
-
-Dependencies are managed through Git submodules — no manual installation required.
+CMake post-build step copies the Fonts/ folder next to the executable, so the game can be launched from any directory as long as the folder structure is preserved.
 
 ---
 
@@ -118,16 +136,19 @@ Dependencies are managed through Git submodules — no manual installation requi
 |-----|--------|
 | **W** | Move player paddle up |
 | **S** | Move player paddle down |
+| **R** | Restart after Game Over |
+| **ESC** | Quit the game |
 
 ---
 
 ## 📚 What I Learned
 
-- Implementing a **game loop** with delta time
-- **Collision detection** and response (angle-based bouncing)
-- Working with **external libraries** (SFML)
-- Managing resources with **smart pointers** (`std::unique_ptr`)
-- Structuring code with **OOP principles**
+- Designing a small **game architecture** with clear separation of responsibilities (input, update, render, UI, AI)
+- Implementing an extensible **inheritance hierarchy** (`GameObject`, `Paddle`, `Ball`, `TextObject` and its descendants)
+- Using **constants and strong types** (`constexpr` values, `enum class`) to avoid magic numbers and make code safer
+- Managing UI and other heap-allocated resources with **RAII** and `std::unique_ptr`
+- Integrating and building **SFML 3.0.2** via CMake and Git submodules on Windows
+
 
 ---
 
@@ -138,6 +159,9 @@ Dependencies are managed through Git submodules — no manual installation requi
 - [ ] Sound effects (paddle hit, goal scored)
 - [ ] Particle effects for ball trail
 - [ ] Adjustable AI difficulty
+- [ ] Observer patterns (for goals) / Factory (for object creation)
+- [ ] High scores records
+- [ ] Customization (colors, speed)
 
 ---
 
@@ -159,4 +183,3 @@ Feel free to use it for learning purposes.
 ---
 
 ⭐ **If you like this project, give it a star!**
-
