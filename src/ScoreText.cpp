@@ -2,15 +2,34 @@
 
 ScoreText::ScoreText(const sf::Font& font)
 	: TextObject(font)
+	, m_playerScore(0)
+	, m_botScore(0)
 {
 	setColor(sf::Color::Blue);
-	setScore(0, 0);
+	updateScoreText();
 }
 
-void ScoreText::setScore(int playerScore, int botScore) 
+void ScoreText::addPlayerPoint()
 {
-	if (!m_text) { return; }
+	++m_playerScore;
+	updateScoreText();
+}
 
-	std::string scoreStr = std::to_string(playerScore) + " : " + std::to_string(botScore);
-	m_text->setString(scoreStr);
+void ScoreText::addBotPoint()
+{
+	++m_botScore;
+	updateScoreText();
+}
+
+void ScoreText::reset()
+{
+	m_playerScore = 0;
+	m_botScore = 0;
+	updateScoreText();
+}
+
+void ScoreText::updateScoreText()
+{
+	std::string scoreStr = std::to_string(m_playerScore) + " : " + std::to_string(m_botScore);
+	m_text.setString(scoreStr);
 }

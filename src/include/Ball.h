@@ -1,16 +1,22 @@
 ﻿#pragma once
 
 #include "GameObject.h"
+
 #include <SFML/Graphics.hpp>
+
+enum class FieldCollision
+{
+    None,
+    TopWall,
+    BottomWall,
+    BotGoal,
+    PlayerGoal
+};
 
 class Ball : public GameObject {
 private:
     sf::CircleShape m_shape;
-    float m_baseSpeed;
-    float m_radius;
-
-    static constexpr float PI = 3.14159265358979323846f;
-    static constexpr float DEG_TO_RAD = PI / 180.0f;
+    float m_baseSpeed{ 0.f };
 
 public:
     Ball();
@@ -18,16 +24,21 @@ public:
     void update(float deltaTime) override;
     void draw(sf::RenderWindow& window) override;
 
-    void updatePhysics(float deltaTime, float windowWidth, float windowHeight);
-    void checkCollision(const sf::FloatRect& bounds);
-    int checkGoal(float windowWidth);
+    void setPosition(const sf::Vector2f& pos) override;
+    void setPosition(float x, float y) override;
+    sf::Vector2f getPosition() const override;
+
+    void setColor(const sf::Color& color) override;
+    sf::FloatRect getBounds() const override;
+
+    FieldCollision handleFieldCollision(const sf::FloatRect& fieldBounds);
+    void handlePaddleCollision(const sf::FloatRect& paddleBounds);
 
     void setRadius(float radius);
-    void setColor(const sf::Color& color);
-    void setSpeed(float speed);
+    float getRadius() const { return m_shape.getRadius(); }
 
-    float getRadius() const { return m_radius; }
+    void setSpeed(float speed);
     float getSpeed() const { return m_baseSpeed; }
 
-    sf::FloatRect getBounds() const;
+    float updateVelocity(float speed, float angleDeg);
 };

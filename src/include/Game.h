@@ -6,6 +6,7 @@
 #include "GameOverText.h"
 #include "RestartHintText.h"
 #include "Constants.h"
+
 #include <SFML/Graphics.hpp>
 #include <memory>
 
@@ -21,21 +22,17 @@ private:
 
     Ball m_ball;
 
-    std::unique_ptr<ScoreText> m_scoreText;
-    std::unique_ptr<GameOverText> m_gameOverText;
-    std::unique_ptr<RestartHintText> m_restartHintText;
+    ScoreText m_scoreText;
+    GameOverText m_gameOverText;
+    RestartHintText m_restartHintText;
 
     enum class LaunchDirection 
     {
-        ToPlayer = -1,
-        ToBot = 1
+        ToPlayer,
+        ToBot
     };
 
-
     LaunchDirection m_lastGoalScorer;
-
-    int m_scorePlayer;
-    int m_scoreBot;
 
     bool m_ballWaiting;
     float m_ballWaitTimer;
@@ -50,14 +47,14 @@ public:
     const Ball& getBall() const { return m_ball; }
     const Paddle& getPlayer() const { return m_player; }
     const Paddle& getBot() const { return m_bot; }
-    int getPlayerScore() const { return m_scorePlayer; }
-    int getBotScore() const { return m_scoreBot; }
+    int getPlayerScore() const { return m_scoreText.getPlayerScore(); }
+    int getBotScore() const { return m_scoreText.getBotScore(); }
     bool isGameOver() const { return m_gameOver; }
 
 private:
     void update(float deltaTime);
-    void updateAI(float deltaTime);
-    void updatePlayerInput(float deltaTime);
+    void updateAI();
+    void updatePlayerInput();
 
     void launchBall(LaunchDirection direction);
 

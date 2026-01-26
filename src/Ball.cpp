@@ -1,6 +1,6 @@
 #include "Ball.h"
 #include "Constants.h"
-#include <SFML/Graphics.hpp>
+
 #include <cmath>
 #include <algorithm>
 
@@ -8,100 +8,113 @@ using namespace PongConstants;
 
 Ball::Ball()
     : m_baseSpeed(0.f)
-    , m_radius(0.f)
 {
-    m_shape.setRadius(0.f);
-    m_shape.setPosition({ 0.f, 0.f });
     m_shape.setFillColor(sf::Color::White);
-    m_shape.setOrigin(sf::Vector2f(0.f, 0.f));
 }
 
 void Ball::update(float deltaTime) 
 {
-    m_position += m_velocity * deltaTime;
-    m_shape.setPosition(m_position);
+    const sf::Vector2f currentPos = m_shape.getPosition();
+    const sf::Vector2f newPos = currentPos + m_velocity * deltaTime;
+
+    m_shape.setPosition(newPos);
 }
 
 void Ball::draw(sf::RenderWindow& window) 
 {
+    if (!m_visible)
+    {
+        return;
+    }
+
     window.draw(m_shape);
 }
 
-void Ball::updatePhysics(float deltaTime, float windowWidth, float windowHeight) 
+FieldCollision Ball::handleFieldCollision(const sf::FloatRect& fieldBounds)
 {
-    if (m_position.y - m_radius < 0.f) 
+    sf::Vector2f pos = m_shape.getPosition();
+    const float radius = m_shape.getRadius();
+
+    if (pos.x + radius < fieldBounds.position.x)
     {
-        m_position.y = m_radius;
-        m_velocity.y = -m_velocity.y;
+        return FieldCollision::BotGoal;
     }
 
-    if (m_position.y + m_radius > windowHeight) 
+    if (pos.x - radius > fieldBounds.position.x + fieldBounds.size.x)
     {
-        m_position.y = windowHeight - m_radius;
-        m_velocity.y = -m_velocity.y;
+        return FieldCollision::PlayerGoal;
     }
 
-    m_shape.setPosition(m_position);
+    FieldCollision result = FieldCollision::None;
+
+    if (pos.y - radius < fieldBounds.position.y)
+    {
+        pos.y = fieldBounds.position.y + radius;
+
+        m_velocity.y = -m_velocity.y;
+
+        result = FieldCollision::TopWall;
+    }
+
+    if (pos.y + radius > fieldBounds.position.y + fieldBounds.size.y)
+    {
+        pos.y = fieldBounds.position.y + fieldBounds.size.y - radius;
+        
+        m_velocity.y = -m_velocity.y;
+
+        result = FieldCollision::BottomWall;
+    }
+
+    m_shape.setPosition(pos);
+
+    return result;
 }
 
-void Ball::checkCollision(const sf::FloatRect& paddleBounds) 
+void Ball::handlePaddleCollision(const sf::FloatRect& paddleBounds)
 {
-    sf::FloatRect ballBounds = m_shape.getGlobalBounds();
-    auto intersection = ballBounds.findIntersection(paddleBounds);
+    const sf::FloatRect ballBounds = m_shape.getGlobalBounds();
+    const auto intersection = ballBounds.findIntersection(paddleBounds);
 
-    if (!intersection) { return; }
+    if (!intersection)
+    {
+        return;
+    }
 
-    const float paddleCenterY = paddleBounds.position.y + paddleBounds.size.y / 2.f;
+    const float paddleCenterY = paddleBounds.position.y + paddleBounds.size.y / HALF_DIVISOR;
     const float hitY = m_shape.getPosition().y;
     const float offset = hitY - paddleCenterY;
-    const float maxOffset = paddleBounds.size.y / 2.f;
 
+    const float maxOffset = paddleBounds.size.y / HALF_DIVISOR;
     float normalized = (maxOffset > 0.f) ? (offset / maxOffset) : 0.f;
     normalized = std::clamp(normalized, -1.f, 1.f);
 
-    float angleDeg = normalized * BALL_MAX_BOUNCE_ANGLE_DEG;
-    float angleRad = angleDeg * DEG_TO_RAD;
-
     m_baseSpeed += BALL_SPEED_INCREMENT;
-    if (m_baseSpeed > BALL_MAX_SPEED) 
+
+    if (m_baseSpeed > BALL_MAX_SPEED)
     {
         m_baseSpeed = BALL_MAX_SPEED;
     }
 
-    float dirX = (m_velocity.x > 0.f) ? -1.f : 1.f;
-    m_velocity.x = std::cos(angleRad) * m_baseSpeed * dirX;
-    m_velocity.y = std::sin(angleRad) * m_baseSpeed;
+    const float angleDeg = normalized * BALL_MAX_BOUNCE_ANGLE_DEG;
+    const float dirX = updateVelocity(m_baseSpeed, angleDeg);
 
-    if (dirX > 0.f) 
+    sf::Vector2f pos = m_shape.getPosition();
+    const float radius = m_shape.getRadius();
+
+    if (dirX > 0.f)
     {
-        m_position.x = paddleBounds.position.x + paddleBounds.size.x + m_radius;
+        pos.x = paddleBounds.position.x + paddleBounds.size.x + radius;
     } else {
-        m_position.x = paddleBounds.position.x - m_radius;
+        pos.x = paddleBounds.position.x - radius;
     }
 
-    m_shape.setPosition(m_position);
-}
-
-int Ball::checkGoal(float windowWidth) 
-{
-    if (m_position.x + m_radius < 0.f) 
-    {
-        return -1;
-    }
-
-    if (m_position.x - m_radius > windowWidth) 
-    {
-        return +1;
-    }
-
-    return 0;
+    m_shape.setPosition(pos);
 }
 
 void Ball::setRadius(float radius)
 {
-    m_radius = radius;
     m_shape.setRadius(radius);
-    m_shape.setOrigin(sf::Vector2f(radius, radius));
+    m_shape.setOrigin({ radius, radius });
 }
 
 void Ball::setColor(const sf::Color& color)
@@ -113,15 +126,41 @@ void Ball::setSpeed(float speed)
 {
     m_baseSpeed = speed;
 
-    if (m_velocity.x !=0.f || m_velocity.y !=0.f)
+    if (m_velocity.x != 0.f || m_velocity.y != 0.f)
     {
-        float currentSpeed = std::sqrt(m_velocity.x * m_velocity.x + m_velocity.y * m_velocity.y);
+        const float currentSpeed = std::sqrt(m_velocity.x * m_velocity.x + m_velocity.y * m_velocity.y);
 
         if (currentSpeed > 0.f)
         {
             m_velocity = (m_velocity / currentSpeed) * m_baseSpeed;
         }
     }
+}
+
+float Ball::updateVelocity(float speed, float angleDeg)
+{
+    const float angleRad = angleDeg * DEG_TO_RAD;
+    const float dirX = (m_velocity.x > 0.f) ? -1.f : 1.f;
+    
+    m_velocity.x = std::cos(angleRad) * speed * dirX;
+    m_velocity.y = std::sin(angleRad) * speed;
+
+    return dirX;
+}
+
+void Ball::setPosition(const sf::Vector2f& pos)
+{
+    m_shape.setPosition(pos);
+}
+
+void Ball::setPosition(float x, float y)
+{
+    m_shape.setPosition({ x, y });
+}
+
+sf::Vector2f Ball::getPosition() const
+{
+    return m_shape.getPosition();
 }
 
 sf::FloatRect Ball::getBounds() const {

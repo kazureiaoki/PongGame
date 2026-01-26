@@ -1,5 +1,6 @@
 ﻿#include "Game.h"
 #include "Constants.h"
+
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <vector>
@@ -11,37 +12,31 @@ using namespace PongConstants;
 void Game::initializeGameObjects()
 {
     m_player.setSize(PADDLE_WIDTH, PADDLE_HEIGHT);
-    m_player.setPosition(PADDLE_OFFSET_FROM_EDGE, WINDOW_HEIGHT / 2.f - PADDLE_HEIGHT / 2.f);
+    m_player.setPosition(PADDLE_OFFSET_FROM_EDGE, WINDOW_HEIGHT / HALF_DIVISOR - PADDLE_HEIGHT / HALF_DIVISOR);
     m_player.setColor(sf::Color::Green);
     m_player.setSpeed(PADDLE_SPEED);
 
     m_bot.setSize(PADDLE_WIDTH, PADDLE_HEIGHT);
-    m_bot.setPosition(WINDOW_WIDTH - PADDLE_OFFSET_FROM_EDGE - PADDLE_WIDTH, WINDOW_HEIGHT / 2.f - PADDLE_HEIGHT / 2.f);
+    m_bot.setPosition(WINDOW_WIDTH - PADDLE_OFFSET_FROM_EDGE - PADDLE_WIDTH, WINDOW_HEIGHT / HALF_DIVISOR - PADDLE_HEIGHT / HALF_DIVISOR);
     m_bot.setColor(sf::Color::Green);
     m_bot.setSpeed(PADDLE_SPEED);
 
     m_ball.setRadius(BALL_RADIUS);
-    m_ball.setPosition(WINDOW_WIDTH / 2.f, WINDOW_HEIGHT / 2.f);
+    m_ball.setPosition(WINDOW_WIDTH / HALF_DIVISOR, WINDOW_HEIGHT / HALF_DIVISOR);
     m_ball.setColor(sf::Color::White);
     m_ball.setSpeed(BALL_INITIAL_SPEED);
 
-    if (m_scoreText)
-    {
-        m_scoreText->setPosition(WINDOW_WIDTH / 2.f, SCORE_TEXT_Y_OFFSET);
-    }
-
-    if (m_gameOverText)
-    {
-        m_gameOverText->setPosition(WINDOW_WIDTH / 2.f, WINDOW_HEIGHT / 2.f - GAME_OVER_TEXT_Y_OFFSET);
-    }
+    m_scoreText.setPosition(WINDOW_WIDTH / HALF_DIVISOR, SCORE_TEXT_Y_OFFSET);
+    m_gameOverText.setPosition(WINDOW_WIDTH / HALF_DIVISOR, WINDOW_HEIGHT / HALF_DIVISOR - GAME_OVER_TEXT_Y_OFFSET);
 }
 
 Game::Game()
-    : m_scorePlayer(0)
-    , m_scoreBot(0)
-    , m_ballWaiting(true)
+    : m_ballWaiting(true)
     , m_ballWaitTimer(0.f)
     , m_gameOver(false)
+    , m_scoreText(m_font)
+    , m_gameOverText(m_font)
+    , m_restartHintText(m_font)
     , m_lastGoalScorer(LaunchDirection::ToBot)
 {
     m_window.create(
@@ -51,13 +46,13 @@ Game::Game()
             }), 
         "Pong Game"
     );
-    m_window.setFramerateLimit(60);
+    m_window.setFramerateLimit(TARGET_FPS);
 
     const std::vector<std::string> fontPaths = 
     {
-        "./Fonts/CaesarDressing-Regular.ttf",
-        "../Fonts/CaesarDressing-Regular.ttf",
-        "Fonts/CaesarDressing-Regular.ttf"
+        std::string(FONT_DIR_CURRENT) + std::string(FONT_FILENAME),
+        std::string(FONT_DIR_PARENT) + std::string(FONT_FILENAME),
+        std::string(FONT_DIR_RELATIVE) + std::string(FONT_FILENAME)
     };
 
     bool fontLoaded = false;
@@ -75,17 +70,19 @@ Game::Game()
         throw std::runtime_error("ERROR: Font not found in any path");
     }
 
-    m_scoreText = std::make_unique<ScoreText>(m_font);
-    m_gameOverText = std::make_unique<GameOverText>(m_font);
-    m_restartHintText = std::make_unique<RestartHintText>(m_font);
+    m_scoreText.setVisible(true);
+    m_gameOverText.setVisible(false);
+    m_restartHintText.setVisible(false);
 
     initializeGameObjects();
 }
 
 void Game::launchBall(LaunchDirection direction)
 {
-    float angleRad = BALL_INITIAL_ANGLE_DEG * DEG_TO_RAD;
-    float dir = static_cast<float>(direction);
+    const float angleRad = BALL_INITIAL_ANGLE_DEG * DEG_TO_RAD;
+    const float dir = (direction == LaunchDirection::ToPlayer)
+        ? LAUNCH_DIRECTION_TO_PLAYER
+        : LAUNCH_DIRECTION_TO_BOT;
 
     m_ball.setVelocity(
         std::cos(angleRad) * BALL_INITIAL_SPEED * dir,
@@ -100,20 +97,15 @@ void Game::run()
         return;
     }
 
-    if (!m_scoreText || !m_gameOverText)
-    {
-        return;
-    }
-
     m_clock.restart();
 
     while (m_window.isOpen())
     {
         float deltaTime = m_clock.restart().asSeconds();
 
-        if (deltaTime > 0.1f)
+        if (deltaTime > MAX_DELTA_TIME)
         {
-            deltaTime = 0.016f;
+            deltaTime = FIXED_DELTA_TIME;
         }
 
         handleEvents();
@@ -124,8 +116,8 @@ void Game::run()
 
 void Game::update(float deltaTime)
 {
-    updatePlayerInput(deltaTime);
-    updateAI(deltaTime);
+    updatePlayerInput();
+    updateAI();
 
     m_player.update(deltaTime);
     m_bot.update(deltaTime);
@@ -149,19 +141,12 @@ void Game::update(float deltaTime)
             } else {
                 launchBall(LaunchDirection::ToPlayer);
             }
-
-            updateScore();
-            return;
         }
     }
 
     if (!m_gameOver)
     {
         m_ball.update(deltaTime);
-        m_ball.updatePhysics(deltaTime, WINDOW_WIDTH, WINDOW_HEIGHT);
-
-        m_ball.checkCollision(m_player.getBounds());
-        m_ball.checkCollision(m_bot.getBounds());
 
         checkGoals();
     }
@@ -169,21 +154,41 @@ void Game::update(float deltaTime)
     updateScore();
 }
 
-void Game::updatePlayerInput(float deltaTime) 
+void Game::updatePlayerInput() 
 {
-    float playerDirection = 0.f;
+    float playerDirection = DIRECTION_NONE;
 
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) 
     {
-        playerDirection = -1.f;
+        playerDirection = DIRECTION_UP;
     }
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) 
     {
-        playerDirection = 1.f;
+        playerDirection = DIRECTION_DOWN;
     }
 
     sf::Vector2f velocity = { 0.f, playerDirection * m_player.getSpeed() };
     m_player.setVelocity(velocity);
+}
+
+void Game::updateAI()
+{
+    float botDirection = DIRECTION_NONE;
+    const sf::Vector2f ballPos = m_ball.getPosition();
+    const sf::FloatRect botBounds = m_bot.getBounds();
+
+    const float botCenterY = botBounds.position.y + botBounds.size.y / HALF_DIVISOR;
+
+    if (ballPos.y < botCenterY - AI_DEAD_ZONE)
+    {
+        botDirection = DIRECTION_UP;
+    }
+    else if (ballPos.y > botCenterY + AI_DEAD_ZONE) {
+        botDirection = DIRECTION_DOWN;
+    }
+
+    sf::Vector2f velocity = { 0.f, botDirection * m_bot.getSpeed() };
+    m_bot.setVelocity(velocity);
 }
 
 void Game::handleEvents() {
@@ -214,7 +219,6 @@ void Game::handleEvents() {
     }
 }
 
-
 void Game::render()
 {
     m_window.clear(sf::Color::Black);
@@ -223,123 +227,94 @@ void Game::render()
     m_bot.draw(m_window);
     m_ball.draw(m_window);
 
-    if (m_scoreText) 
-    {
-        m_scoreText->draw(m_window);
-    }
-
-    if (m_gameOverText)
-    {
-        m_gameOverText->draw(m_window);
-    }
-
-    if (m_restartHintText) 
-    {
-        m_restartHintText->draw(m_window);
-    }
+    m_scoreText.draw(m_window);
+    m_gameOverText.draw(m_window);
+    m_restartHintText.draw(m_window);
 
     m_window.display();
 }
 
-void Game::updateAI(float deltaTime)
-{
-    float botDirection = 0.f;
-    sf::Vector2f ballPos = m_ball.getPosition();
-
-    sf::FloatRect botBounds = m_bot.getBounds();
-    float botCenterY = botBounds.position.y + botBounds.size.y / 2.f;
-
-    if (ballPos.y < botCenterY - AI_DEAD_ZONE)
-    {
-        botDirection = -1.f;
-    } else if (ballPos.y > botCenterY + AI_DEAD_ZONE) {
-        botDirection = 1.f;
-    }
-
-    sf::Vector2f velocity = { 0.f, botDirection * m_bot.getSpeed() };
-    m_bot.setVelocity(velocity);
-}
-
 void Game::checkGoals()
 {
-    int goal = m_ball.checkGoal(WINDOW_WIDTH);
+    const FieldCollision goal = m_ball.handleFieldCollision({ { 0.f, 0.f }, { WINDOW_WIDTH, WINDOW_HEIGHT } });
 
-    if (goal == -1)
+    if (goal == FieldCollision::BotGoal)
     {
-        ++m_scoreBot;
+        m_scoreText.addBotPoint();
         m_lastGoalScorer = LaunchDirection::ToBot;
         
-        m_ball.setPosition(WINDOW_WIDTH / 2.f, WINDOW_HEIGHT / 2.f);
+        m_ball.setPosition(WINDOW_WIDTH / HALF_DIVISOR, WINDOW_HEIGHT / HALF_DIVISOR);
         m_ball.setVelocity(0.f, 0.f);
 
         m_ballWaiting = true;
         m_ballWaitTimer = 0.f;
-    } else if (goal == +1) {
-        ++m_scorePlayer;
+    } else if (goal == FieldCollision::PlayerGoal) {
+        m_scoreText.addPlayerPoint();
         m_lastGoalScorer = LaunchDirection::ToPlayer;
 
-        m_ball.setPosition(WINDOW_WIDTH / 2.f, WINDOW_HEIGHT / 2.f);
+        m_ball.setPosition(WINDOW_WIDTH / HALF_DIVISOR, WINDOW_HEIGHT / HALF_DIVISOR);
         m_ball.setVelocity(0.f, 0.f);
 
         m_ballWaiting = true;
         m_ballWaitTimer = 0.f;
     }
 
-    if (m_scorePlayer >= MAX_SCORE || m_scoreBot >= MAX_SCORE)
+    m_ball.handlePaddleCollision(m_player.getBounds());
+    m_ball.handlePaddleCollision(m_bot.getBounds());
+
+    if (m_scoreText.getPlayerScore() >= MAX_SCORE|| m_scoreText.getBotScore() >= MAX_SCORE)
     {
         m_gameOver = true;
         m_ballWaiting = false;
+
+        m_gameOverText.setVisible(true);
+        m_restartHintText.setVisible(false);
     }
 }
 
 void Game::updateScore() 
 {
-    if (m_scoreText) 
-    {
-        m_scoreText->setScore(m_scorePlayer, m_scoreBot);
-        m_scoreText->centerHorizontally(WINDOW_WIDTH);
-    }
+    m_scoreText.centerHorizontally(WINDOW_WIDTH);
 
-    if(m_gameOverText) 
+    if (m_gameOver) 
     {
-        if (m_gameOver) 
+        if (m_scoreText.getPlayerScore() > m_scoreText.getBotScore())
         {
-            if (m_scorePlayer > m_scoreBot) 
-            {
-                m_gameOverText->setMessage(" GAME OVER\nPlayer wins!");
-            } else if (m_scoreBot > m_scorePlayer) {
-                m_gameOverText->setMessage("GAME OVER\n Bot wins!");
-            } else {
-                m_gameOverText->setMessage("GAME OVER\n Draw!");
-            }
-
-            m_gameOverText->centerHorizontally(WINDOW_WIDTH);
-
-            if (m_restartHintText) 
-            {
-                m_restartHintText->show();
-
-                float hintY = WINDOW_HEIGHT / 2.f + RESTART_HINT_Y_OFFSET;
-                m_restartHintText->setPosition(WINDOW_WIDTH / 2.f, hintY);
-                m_restartHintText->centerHorizontally(WINDOW_WIDTH);
-            }
-
+            m_gameOverText.setMessage(" GAME OVER\nPlayer wins!");
+        } else if (m_scoreText.getBotScore() > m_scoreText.getPlayerScore()) {
+            m_gameOverText.setMessage("GAME OVER\n Bot wins!");
         } else {
-            m_gameOverText->clear();
-
-            if (m_restartHintText) 
-            {
-                m_restartHintText->hide();
-            }
+            m_gameOverText.setMessage("GAME OVER\n  Draw!");
         }
+
+        m_ball.setVisible(false);
+
+        m_gameOverText.centerHorizontally(WINDOW_WIDTH);
+        m_gameOverText.setVisible(true);
+
+        float hintY = WINDOW_HEIGHT / HALF_DIVISOR + RESTART_HINT_Y_OFFSET;
+
+        m_restartHintText.setPosition(WINDOW_WIDTH / HALF_DIVISOR, hintY);
+        m_restartHintText.centerHorizontally(WINDOW_WIDTH);
+        m_restartHintText.setVisible(true);
+
+    } else {
+        m_gameOverText.setVisible(false);
+        m_restartHintText.setVisible(false);
     }
 }
 
 void Game::resetGame()
 {
-    m_scorePlayer = 0;
-    m_scoreBot = 0;
+    m_scoreText.reset();
+
     m_gameOver = false;
+
+    m_ball.setVisible(true);
+
+    m_gameOverText.setVisible(false);
+    m_restartHintText.setVisible(false);
+
     m_ballWaiting = true;
     m_ballWaitTimer = 0.f;
     initializeGameObjects();

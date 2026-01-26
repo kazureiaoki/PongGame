@@ -1,44 +1,61 @@
 #include "Paddle.h"
-#include <SFML/Graphics.hpp>
+
+#include <algorithm>
 
 Paddle::Paddle()
     : m_speed(0.f)
-    , m_size(0.f, 0.f)
 {
-    m_shape.setSize({ 0.f,0.f });
-    m_shape.setPosition({ 0.f,0.f });
     m_shape.setFillColor(sf::Color::White);
 }
 
 void Paddle::update(float deltaTime) 
 {
-    m_position += m_velocity * deltaTime;
-    m_shape.setPosition(m_position);
+    const sf::Vector2f currentPos = m_shape.getPosition();
+    const sf::Vector2f newPos = currentPos + m_velocity * deltaTime;
+
+    m_shape.setPosition(newPos);
 }
 
 void Paddle::draw(sf::RenderWindow& window) 
 {
+    if (!m_visible)
+    {
+        return;
+    }
+
     window.draw(m_shape);
 }
 
-void Paddle::clampToWindow(float windowHeight) 
+void Paddle::setPosition(const sf::Vector2f& pos)
 {
-    if (m_position.y < 0.f) 
+    m_shape.setPosition(pos);
+}
+
+void Paddle::setPosition(float x, float y)
+{
+    m_shape.setPosition({ x, y });
+}
+
+void Paddle::clampToWindow(const float windowHeight) 
+{
+    sf::Vector2f pos = m_shape.getPosition();
+    const sf::Vector2f size = m_shape.getSize();
+
+    if (pos.y < 0.f)
     {
-        m_position.y = 0.f;
+        pos.y = 0.f;
     }
 
-    if (m_position.y + m_size.y > windowHeight) 
+    if (pos.y + size.y > windowHeight)
     {
-        m_position.y = windowHeight - m_size.y;
+        pos.y = windowHeight - size.y;
     }
 
-    m_shape.setPosition(m_position);
+    m_shape.setPosition(pos);
 }
 
 void Paddle::setSize(const sf::Vector2f& size)
 {
-    m_size = size;
     m_shape.setSize(size);
 }
 
@@ -57,6 +74,12 @@ void Paddle::setSpeed(float speed)
     m_speed = speed;
 }
 
-sf::FloatRect Paddle::getBounds() const {
+sf::Vector2f Paddle::getPosition() const
+{
+    return m_shape.getPosition();
+}
+
+sf::FloatRect Paddle::getBounds() const 
+{
     return m_shape.getGlobalBounds();
 }
